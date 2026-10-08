@@ -1,0 +1,21 @@
+{
+  "name": "toothbrush-clinic",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "vitest run", "dev": "vite", "build": "vite build", "preview": "vite preview"
+  },
+  "keywords": [],
+  "type": "commonjs",
+  "devDependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/core": "^8.5.3",
+    "@playwright/test": "^1.64.0",
+    "playwright": "^1.64.0",
+    "three": "^0.186.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.3",
+    "vitest": "^5.0.3"
+  }
+}
