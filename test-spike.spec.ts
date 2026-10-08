@@ -11,25 +11,24 @@ test('capture screenshots of P0 spike', async ({ page }) => {
 
   // Test the zones
   const zones = [
-    'upper_front_outer',
-    'upper_right_outer',
-    'upper_left_outer',
-    'lower_front_outer',
-    'lower_right_outer',
-    'lower_left_outer',
-    'upper_front_inner',
-    'upper_right_inner',
-    'upper_left_inner',
-    'lower_front_inner',
-    'lower_right_inner',
-    'lower_left_inner',
+    // 12-zone
+    'upper_front_outer', 'upper_right_outer', 'upper_left_outer',
+    'lower_front_outer', 'lower_right_outer', 'lower_left_outer',
+    'upper_front_inner', 'upper_right_inner', 'upper_left_inner',
+    'lower_front_inner', 'lower_right_inner', 'lower_left_inner',
+    // 8-zone
+    'q_upper_right_outer', 'q_upper_left_outer', 'q_lower_right_outer', 'q_lower_left_outer',
+    'q_upper_right_inner', 'q_upper_left_inner', 'q_lower_right_inner', 'q_lower_left_inner',
+    // chewing
+    'upper_right_chewing', 'upper_left_chewing', 'lower_left_chewing', 'lower_right_chewing'
   ];
 
   for (const zone of zones) {
     await page.evaluate((z) => {
-      (window as any).highlightZone(z);
+      (window as any).mouthView.highlightZone(z);
+      (window as any).mouthView.focusZone(z);
     }, zone);
-    await page.waitForTimeout(100); // Give it a moment to render
+    await page.waitForTimeout(500); // Wait for camera lerping
     await page.screenshot({ path: `screenshots/${zone}.png` });
   }
 
