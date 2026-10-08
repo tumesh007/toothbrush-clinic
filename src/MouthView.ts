@@ -82,21 +82,38 @@ export class MouthView implements MouthViewPort {
 
   constructor(container: HTMLElement) {
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0xf0f0f0);
+    this.scene.background = new THREE.Color(0x1a1a2e);  // dark mouth interior
 
-    this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
-    this.camera.position.set(0, 0, 15);
+    const w = container.clientWidth  || window.innerWidth;
+    const h = container.clientHeight || window.innerHeight;
 
-    this.renderer = new THREE.WebGLRenderer({ antialias: true });
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
-    container.appendChild(this.renderer.domElement);
+    this.camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
+    this.camera.position.set(0, 0, 18);
 
-    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    this.renderer.setPixelRatio(window.devicePixelRatio);
+    this.renderer.setSize(w, h);
+
+    const canvas = this.renderer.domElement;
+    // CRITICAL for Android WebView: touch-action must be on the canvas itself
+    canvas.style.touchAction = 'none';
+    canvas.style.position = 'absolute';
+    canvas.style.top = '0';
+    canvas.style.left = '0';
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    container.appendChild(canvas);
+
+    // Pass canvas directly — not the container — so touches are not
+    // intercepted by any overlying UI div
+    this.controls = new OrbitControls(this.camera, canvas);
     this.controls.enableDamping = true;
-    this.controls.dampingFactor = 0.05;
-    this.controls.target.set(0, 0, 0); // initial lookAt
-    
-    // Stop auto transition if user manually interacts
+    this.controls.dampingFactor = 0.08;
+    this.controls.minDistance = 5;
+    this.controls.maxDistance = 35;
+    this.controls.target.set(0, 0, -1);
+
+    // Stop auto-transition the moment the user touches the model
     this.controls.addEventListener('start', () => {
       this.isTransitioning = false;
     });
@@ -140,6 +157,14 @@ export class MouthView implements MouthViewPort {
     this.renderer.setAnimationLoop(() => {
       this.animate();
       this.renderer.render(this.scene, this.camera);
+    });
+
+    window.addEventListener('resize', () => {
+      const rw = container.clientWidth  || window.innerWidth;
+      const rh = container.clientHeight || window.innerHeight;
+      this.camera.aspect = rw / rh;
+      this.camera.updateProjectionMatrix();
+      this.renderer.setSize(rw, rh);
     });
   }
   

@@ -13,6 +13,12 @@ class ClockAdapter {
 async function init() {
   const container = document.getElementById('app')!;
   
+  // Ensure the app container fills the screen with real pixel dimensions
+  container.style.position = 'relative';
+  container.style.width = '100vw';
+  container.style.height = '100vh';
+  container.style.overflow = 'hidden';
+
   const mouthViewContainer = document.createElement('div');
   mouthViewContainer.id = 'mouth-view-container';
   mouthViewContainer.style.width = '100%';
@@ -21,8 +27,13 @@ async function init() {
   mouthViewContainer.style.top = '0';
   mouthViewContainer.style.left = '0';
   mouthViewContainer.style.zIndex = '1';
+  // touch-action on the CONTAINER too, belt-and-suspenders for Android
+  mouthViewContainer.style.touchAction = 'none';
   container.appendChild(mouthViewContainer);
-  
+
+  // Small forced layout to ensure clientWidth/clientHeight are non-zero before Three.js reads them
+  mouthViewContainer.getBoundingClientRect();
+
   const mouthView = new MouthView(mouthViewContainer);
   (window as any).mouthView = mouthView;
   (window as any).ZONES = {};
@@ -38,7 +49,8 @@ async function init() {
   uiLayer.style.width = '100%';
   uiLayer.style.height = '100%';
   uiLayer.style.zIndex = '10';
-  uiLayer.style.pointerEvents = 'none'; // Let clicks pass through where no UI
+  // MUST be none so touches pass through to the Three.js canvas below
+  uiLayer.style.pointerEvents = 'none';
   container.appendChild(uiLayer);
   
   const store = new LocalStorageSettingsStore();
@@ -71,7 +83,7 @@ async function init() {
     mouthView.clearHighlight();
     
     renderUI(`
-      <div style="background: white; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:sans-serif;">
+      <div style="background: white; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:sans-serif; pointer-events: auto;">
         <h1>Toothbrush Clinic</h1>
         <p>${Math.floor(settings.duration / 60)} Minutes, ${settings.zoneMode} Sections ${settings.chewing ? '+ Chewing' : ''}</p>
         <button id="btn-start" style="padding:15px 30px; font-size:20px; margin: 10px; border-radius: 8px; border:none; background:#007bff; color:white;">Start Brushing</button>
@@ -85,7 +97,7 @@ async function init() {
   
   function showParentGate(onSuccess: () => void) {
     renderUI(`
-      <div style="background: white; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:sans-serif;">
+      <div style="background: white; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:sans-serif; pointer-events: auto;">
         <h2>Parent Gate</h2>
         <p>What is 2 + 3?</p>
         <div>
@@ -112,7 +124,7 @@ async function init() {
   
   function showSettings() {
     renderUI(`
-      <div style="background: white; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; padding-top: 20px; font-family:sans-serif; overflow-y:auto;">
+      <div style="background: white; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; padding-top: 20px; font-family:sans-serif; overflow-y:auto; pointer-events: auto;">
         <h2>Settings</h2>
         <label><input type="checkbox" id="chk-voice" ${settings.voice ? 'checked' : ''}> Voice</label><br>
         <label><input type="checkbox" id="chk-sound" ${settings.sound ? 'checked' : ''}> Sound</label><br>
@@ -186,7 +198,7 @@ async function init() {
                (data.currentZone ? data.currentZone.toUpperCase().replace(/_/g, ' ') : '');
                
     renderUI(`
-      <div style="width:100%; height:100%; display:flex; flex-direction:column; justify-content:space-between; padding: 20px; box-sizing: border-box; font-family:sans-serif; color: #333;">
+      <div style="width:100%; height:100%; display:flex; flex-direction:column; justify-content:space-between; padding: 20px; box-sizing: border-box; font-family:sans-serif; color: #333; pointer-events: none;">
         <div style="background:rgba(255,255,255,0.8); padding: 10px; border-radius: 8px; text-align:center; font-weight:bold; font-size:24px;">
           ${text}
         </div>
@@ -194,7 +206,7 @@ async function init() {
           ${data.remainingSeconds}
         </div>
         <div style="display:flex; justify-content:space-between;">
-          <button id="btn-pause" style="padding:15px; font-size:18px; border-radius:8px; border:none; background:#ffc107;">Pause</button>
+          <button id="btn-pause" style="padding:15px; font-size:18px; border-radius:8px; border:none; background:#ffc107; pointer-events: auto;">Pause</button>
           <div style="background:rgba(255,255,255,0.8); padding: 10px; border-radius: 8px; font-weight:bold;">
             Next: ${data.currentZoneIndex < protocol.slots.length - 1 ? protocol.slots[data.currentZoneIndex + 1]?.id.replace(/_/g, ' ') : 'Done'}
           </div>
@@ -207,7 +219,7 @@ async function init() {
   
   function showPaused() {
     renderUI(`
-      <div style="background: rgba(255,255,255,0.9); width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:sans-serif;">
+      <div style="background: rgba(255,255,255,0.9); width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:sans-serif; pointer-events: auto;">
         <h2>BRUSHING PAUSED</h2>
         <button id="btn-resume" style="padding:15px 30px; font-size:20px; margin: 10px; border-radius: 8px; border:none; background:#28a745; color:white;">Resume</button>
         <button id="btn-restart" style="padding:15px 30px; font-size:20px; margin: 10px; border-radius: 8px; border:1px solid #ccc; background:white;">Restart</button>
@@ -230,7 +242,7 @@ async function init() {
   function showComplete(data: SessionData, protocol: any) {
     mouthViewContainer.style.visibility = 'hidden';
     renderUI(`
-      <div style="background: white; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:sans-serif;">
+      <div style="background: white; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:sans-serif; pointer-events: auto;">
         <h2>BRUSHING COMPLETE</h2>
         <p>You brushed all sections!</p>
         <p>Time: ${data.elapsedSeconds} seconds</p>
