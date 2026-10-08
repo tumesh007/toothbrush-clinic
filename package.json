@@ -4,12 +4,16 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "vitest run", "dev": "vite", "build": "vite build", "preview": "vite preview"
+    "test": "vitest run",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "keywords": [],
   "type": "commonjs",
   "devDependencies": {
     "@capacitor/android": "^8.5.3",
+    "@capacitor/cli": "^8.5.3",
     "@capacitor/core": "^8.5.3",
     "@playwright/test": "^1.64.0",
     "playwright": "^1.64.0",
