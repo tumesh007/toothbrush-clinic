@@ -1,6 +1,11 @@
 import { test, expect } from '@playwright/test';
 
 test('App lifecycle, settings, persistence', async ({ page }) => {
+  page.on('dialog', dialog => {
+    console.log('Dialog:', dialog.message());
+    dialog.accept();
+  });
+  page.on('console', msg => console.log('Browser Console:', msg.text()));
   await page.goto('http://localhost:5173');
   
   // Home screen
@@ -49,7 +54,6 @@ test('App lifecycle, settings, persistence', async ({ page }) => {
   await expect(page.getByText('GET READY')).toBeVisible();
   
   // Exit
-  page.on('dialog', dialog => dialog.accept()); // Accept confirm
   await page.evaluate(() => {
     Object.defineProperty(document, 'hidden', { value: true, writable: false });
     document.dispatchEvent(new Event('visibilitychange'));

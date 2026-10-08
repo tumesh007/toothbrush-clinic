@@ -4,6 +4,7 @@ import { BrushingController } from './BrushingController';
 import { LocalStorageSettingsStore, WebVoicePort, WebSoundPort, WebHapticPort, WebKeepAwakePort } from './adapters';
 import { createAutoProtocol } from './protocol/allocation';
 import { SessionData } from './protocol/StateMachine';
+import { ZONES_12, ZONES_8, CHEWING_ZONES } from './protocol/zones';
 
 class ClockAdapter {
   now() { return performance.now(); }
@@ -23,6 +24,11 @@ async function init() {
   container.appendChild(mouthViewContainer);
   
   const mouthView = new MouthView(mouthViewContainer);
+  (window as any).mouthView = mouthView;
+  (window as any).ZONES = {};
+  [...ZONES_12, ...ZONES_8, ...CHEWING_ZONES].forEach(z => {
+      (window as any).ZONES[z.id] = true;
+  });
 
   const uiLayer = document.createElement('div');
   uiLayer.id = 'ui-layer';
