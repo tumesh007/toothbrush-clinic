@@ -6,6 +6,7 @@ import { VoicePort, SoundPort, HapticPort, KeepAwakePort, Settings } from './por
 export class BrushingController {
   private lastSessionData: SessionData | null = null;
   private timerId: any = null;
+  private currentProtocol: Protocol | null = null;
 
   constructor(
     private sm: SessionStateMachine,
@@ -22,6 +23,7 @@ export class BrushingController {
     const res = this.sm.start(protocol);
     if (!res.ok) return res;
     
+    this.currentProtocol = protocol;
     await this.keepAwake.acquire();
     this.processEvents(this.sm.getEvents());
     this.notifyUI();
@@ -91,6 +93,8 @@ export class BrushingController {
 
   private notifyUI() {
     const data = this.sm.getSessionData();
+    this.mouthView.updateState(data, this.currentProtocol);
+
     // Only notify if something changed that UI cares about (e.g. remaining seconds, state, zone)
     if (
       !this.lastSessionData ||
