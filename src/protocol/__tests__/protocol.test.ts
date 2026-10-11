@@ -222,3 +222,128 @@ describe('Validation', () => {
     if (!p.ok) expect(p.code).toBe('DURATION_OUT_OF_RANGE');
   });
 });
+
+// ─── V2 Tests ────────────────────────────────────────────────────────────────
+
+describe('V2 — Surface coverage', () => {
+  it('28 outer + 28 inner + 16 chewing = 72 total addressable surfaces', () => {
+    // outer/inner for every tooth
+    expect(ALL_TEETH.length).toBe(28);
+    const posteriors = [...POSTERIOR_TEETH_UR, ...POSTERIOR_TEETH_UL, ...POSTERIOR_TEETH_LR, ...POSTERIOR_TEETH_LL];
+    expect(posteriors.length).toBe(16);
+    const total = ALL_TEETH.length * 2 + posteriors.length;
+    expect(total).toBe(72);
+  });
+});
+
+describe('V2 — 12-zone three-surface timing', () => {
+  const cases: Array<[number, number, number, number, number]> = [
+    // [totalSec, nSlots, base, remainder, +1slots]
+    [120, 16,  7, 8,  8],  // 7*8 + 8*8 = 56+64=120  — base=7 r=8 → first 8 get 8
+    [180, 16, 11, 4,  4],  // 11*12 + 12*4 = 132+48=180 — base=11 r=4
+    [240, 16, 15, 0, 16],  // 15*16 = 240
+    [300, 16, 18, 12, 12], // 18*4 + 19*12 = 72+228=300 — base=18 r=12
+    [360, 16, 22, 8,  8],  // 22*8 + 23*8 = 176+184=360
+  ];
+
+  cases.forEach(([totalSec]) => {
+    it(`${totalSec}s / 16 slots sums exactly to ${totalSec}`, () => {
+      const p = createAutoProtocol(totalSec, 12, true);
+      expect(p.ok).toBe(true);
+      if (p.ok) {
+        const sum = p.value.slots.reduce((a, s) => a + s.duration, 0);
+        expect(sum).toBe(totalSec);
+        expect(p.value.slots.length).toBe(16);
+        p.value.slots.forEach(s => expect(s.duration).toBeGreaterThanOrEqual(5));
+      }
+    });
+  });
+});
+
+describe('V2 — 8-zone three-surface timing (12 slots)', () => {
+  [120, 180, 240, 300, 360].forEach(totalSec => {
+    it(`${totalSec}s / 12 slots sums exactly to ${totalSec}`, () => {
+      const p = createAutoProtocol(totalSec, 8, true);
+      expect(p.ok).toBe(true);
+      if (p.ok) {
+        const sum = p.value.slots.reduce((a, s) => a + s.duration, 0);
+        expect(sum).toBe(totalSec);
+        expect(p.value.slots.length).toBe(12);
+        p.value.slots.forEach(s => expect(s.duration).toBeGreaterThanOrEqual(5));
+      }
+    });
+  });
+});
+
+describe('V2 — 12-zone side-only timing (12 slots)', () => {
+  [120, 180, 240, 300, 360].forEach(totalSec => {
+    it(`${totalSec}s / 12 slots sums to ${totalSec}`, () => {
+      const p = createAutoProtocol(totalSec, 12, false);
+      expect(p.ok).toBe(true);
+      if (p.ok) {
+        const sum = p.value.slots.reduce((a, s) => a + s.duration, 0);
+        expect(sum).toBe(totalSec);
+        p.value.slots.forEach(s => expect(s.duration).toBeGreaterThanOrEqual(5));
+      }
+    });
+  });
+});
+
+describe('V2 — 8-zone side-only timing (8 slots)', () => {
+  [120, 180, 240, 300, 360].forEach(totalSec => {
+    it(`${totalSec}s / 8 slots sums to ${totalSec}`, () => {
+      const p = createAutoProtocol(totalSec, 8, false);
+      expect(p.ok).toBe(true);
+      if (p.ok) {
+        const sum = p.value.slots.reduce((a, s) => a + s.duration, 0);
+        expect(sum).toBe(totalSec);
+      }
+    });
+  });
+});
+
+describe('V2 — Chewing zones contain only posterior teeth', () => {
+  it('CHEWING_ZONES contain exactly 16 posterior tooth-surface pairs', () => {
+    let count = 0;
+    CHEWING_ZONES.forEach(z => {
+      expect(z.surfaces).toEqual(['chewing']);
+      expect(z.toothIds.length).toBe(4);
+      count += z.toothIds.length;
+    });
+    expect(count).toBe(16);
+  });
+
+  it('12-zone + chewing generates all 4 chewing zone IDs exactly once', () => {
+    const p = createAutoProtocol(240, 12, true);
+    expect(p.ok).toBe(true);
+    if (p.ok) {
+      const ids = p.value.slots.map(s => s.id);
+      ['upper_right_chewing','upper_left_chewing','lower_left_chewing','lower_right_chewing'].forEach(id => {
+        expect(ids.filter(x => x === id).length).toBe(1);
+      });
+    }
+  });
+});
+
+describe('V2 — 240s / 4 min exact allocation', () => {
+  it('12 zones no chewing: 20s each', () => {
+    const p = createAutoProtocol(240, 12, false);
+    expect(p.ok).toBe(true);
+    if (p.ok) p.value.slots.forEach(s => expect(s.duration).toBe(20));
+  });
+  it('12 zones + chewing (16 slots): 15s each', () => {
+    const p = createAutoProtocol(240, 12, true);
+    expect(p.ok).toBe(true);
+    if (p.ok) p.value.slots.forEach(s => expect(s.duration).toBe(15));
+  });
+  it('8 zones no chewing: 30s each', () => {
+    const p = createAutoProtocol(240, 8, false);
+    expect(p.ok).toBe(true);
+    if (p.ok) p.value.slots.forEach(s => expect(s.duration).toBe(30));
+  });
+  it('8 zones + chewing (12 slots): 20s each', () => {
+    const p = createAutoProtocol(240, 8, true);
+    expect(p.ok).toBe(true);
+    if (p.ok) p.value.slots.forEach(s => expect(s.duration).toBe(20));
+  });
+});

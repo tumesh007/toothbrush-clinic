@@ -4,7 +4,7 @@ export class LocalStorageSettingsStore implements SettingsStore {
   private defaultSettings: Settings = {
     duration: 180,
     zoneMode: 12,
-    chewing: false,
+    chewing: true,   // V2: chewing is ON by default — it is a first-class guided surface
     voice: true,
     sound: true,
     countdownSound: false,

@@ -117,9 +117,9 @@ export class BrushingController {
         case 'ZoneStarted':
         case 'FinalZoneStarted':
           if (ev.type === 'FinalZoneStarted' && this.settings.voice) {
-            this.voice.speak("Almost finished.");
-          } else if (ev.type === 'ZoneStarted' && this.settings.voice && ev.index === 0) {
-            // First zone, already said "Let's start brushing."
+            this.voice.speak("Almost finished. " + this.zoneInstruction(ev.zoneId));
+          } else if (ev.type === 'ZoneStarted' && this.settings.voice && ev.index > 0) {
+            this.voice.speak(this.zoneInstruction(ev.zoneId));
           }
           this.mouthView.highlightZone(ev.zoneId);
           this.mouthView.focusZone(ev.zoneId);
@@ -130,12 +130,12 @@ export class BrushingController {
           break;
         case 'TransitionStarted':
           if (this.settings.voice) {
-            this.voice.speak("Next section.");
+            this.voice.speak("Good. Next section.");
           }
           break;
         case 'Halfway':
           if (this.settings.voice) {
-            this.voice.speak("You're halfway there.");
+            this.voice.speak("You're halfway there. Keep going!");
           }
           break;
         case 'Completed':
@@ -147,5 +147,41 @@ export class BrushingController {
           break;
       }
     }
+  }
+
+  /** Returns a child-friendly spoken instruction for a given zone ID. */
+  private zoneInstruction(zoneId: string): string {
+    const map: Record<string, string> = {
+      // 12-zone outer
+      'upper_right_outer':  'Upper right — outside.',
+      'upper_front_outer':  'Upper front — outside.',
+      'upper_left_outer':   'Upper left — outside.',
+      'lower_right_outer':  'Lower right — outside.',
+      'lower_front_outer':  'Lower front — outside.',
+      'lower_left_outer':   'Lower left — outside.',
+      // 12-zone inner
+      'upper_right_inner':  'Upper right — inside.',
+      'upper_front_inner':  'Upper front — inside.',
+      'upper_left_inner':   'Upper left — inside.',
+      'lower_right_inner':  'Lower right — inside.',
+      'lower_front_inner':  'Lower front — inside.',
+      'lower_left_inner':   'Lower left — inside.',
+      // chewing surfaces
+      'upper_right_chewing': 'Now brush the chewing surfaces on the upper right.',
+      'upper_left_chewing':  'Now brush the chewing surfaces on the upper left.',
+      'lower_right_chewing': 'Now brush the chewing surfaces on the lower right.',
+      'lower_left_chewing':  'Now brush the chewing surfaces on the lower left.',
+      // 8-zone outer
+      'q_upper_right_outer': 'Upper right — outside.',
+      'q_upper_left_outer':  'Upper left — outside.',
+      'q_lower_right_outer': 'Lower right — outside.',
+      'q_lower_left_outer':  'Lower left — outside.',
+      // 8-zone inner
+      'q_upper_right_inner': 'Upper right — inside.',
+      'q_upper_left_inner':  'Upper left — inside.',
+      'q_lower_right_inner': 'Lower right — inside.',
+      'q_lower_left_inner':  'Lower left — inside.',
+    };
+    return map[zoneId] ?? 'Next section.';
   }
 }
