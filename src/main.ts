@@ -246,7 +246,7 @@ async function init() {
           ${currentLabel}
           ${isChewing ? '<div style="font-size:13px; color:#888; font-weight:normal; margin-top:2px;">Top/chewing surface of back teeth</div>' : ''}
         </div>
-        <div style="font-size:88px; font-weight:bold; text-align:center; color:white; text-shadow:0 2px 8px rgba(0,0,0,0.5);">
+        <div id="remaining-seconds" style="font-size:88px; font-weight:bold; text-align:center; color:white; text-shadow:0 2px 8px rgba(0,0,0,0.5);">
           ${data.remainingSeconds}
         </div>
         <div style="display:flex; justify-content:space-between; align-items:center;">

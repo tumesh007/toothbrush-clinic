@@ -71,7 +71,7 @@ The project has strict tests covering the state machine, protocol allocation, no
 # Run unit tests
 npm test
 
-# Run end-to-end UI tests (the Vite server on port 5173 must be running)
+# Run end-to-end UI tests (Playwright starts or reuses Vite on port 5173)
 npm run test:e2e
 ```
 

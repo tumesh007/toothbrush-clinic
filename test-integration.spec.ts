@@ -1,64 +1,42 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
-test('App lifecycle, settings, persistence', async ({ page }) => {
-  page.on('dialog', dialog => {
-    console.log('Dialog:', dialog.message());
-    dialog.accept();
-  });
-  page.on('console', msg => console.log('Browser Console:', msg.text()));
-  await page.goto('http://localhost:5173');
-  
-  // Home screen
-  await expect(page.getByText('Toothbrush Clinic')).toBeVisible();
-  
-  // Go to Settings via Parent Gate
-  await page.click('#btn-settings');
-  await expect(page.getByText('Parent Gate')).toBeVisible();
-  await page.click('button:has-text("5")'); // Answer correctly
-  
-  // Settings screen
-  await expect(page.getByText('Settings')).toBeVisible();
-  
-  // Toggle some settings
-  const chkChewing = page.locator('#chk-chewing');
-  await chkChewing.check();
-  
-  await page.selectOption('#sel-duration', '120'); // 2 Minutes
-  
-  await page.click('#btn-save');
-  
-  // Back to home, verify text changed
-  await expect(page.getByText('2 Minutes, 12 Sections + Chewing')).toBeVisible();
-  
-  // Reload page to test persistence
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.clear());
+});
+
+test('settings, duration presets, persistence, pause, resume and cancellation', async ({ page }) => {
+  page.on('dialog', dialog => dialog.accept());
+  await page.goto('/');
+
+  await expect(page.getByRole('heading', { name: 'Toothbrush Clinic' })).toBeVisible();
+  await page.locator('#btn-settings').click();
+  await page.locator('.ans[data-val="5"]').click();
+  await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
+
+  const durationOptions = page.locator('input[name="duration"]');
+  await expect(durationOptions).toHaveCount(5);
+  for (const value of ['120', '180', '240', '300', '360']) {
+    await expect(page.locator(`input[name="duration"][value="${value}"]`)).toBeAttached();
+  }
+
+  await expect(page.locator('#chk-chewing')).toBeChecked();
+  await page.locator('input[name="duration"][value="120"]').check();
+  await page.locator('input[name="zones"][value="8"]').check();
+  await page.locator('input[name="camera-mode"][value="manual"]').check();
+  await page.locator('#chk-reduced-motion').check();
+  await page.locator('#btn-save').click();
+  await expect(page.locator('#ui-layer')).toContainText('2 min · 12 sections · chewing surfaces');
+
   await page.reload();
-  await expect(page.getByText('2 Minutes, 12 Sections + Chewing')).toBeVisible();
-  
-  // Start brushing
-  await page.click('#btn-start');
-  
-  // Verify GET READY
+  await expect(page.locator('#ui-layer')).toContainText('2 min · 12 sections · chewing surfaces');
+  await page.locator('#btn-start').click();
   await expect(page.getByText('GET READY')).toBeVisible();
-  
-  // Trigger visibilitychange to test auto-pause
-  await page.evaluate(() => {
-    Object.defineProperty(document, 'hidden', { value: true, writable: false });
-    document.dispatchEvent(new Event('visibilitychange'));
-  });
-  
-  // Should be paused
-  await expect(page.getByText('BRUSHING PAUSED')).toBeVisible();
-  
-  // Resume
-  await page.click('#btn-resume');
+
+  await page.locator('#btn-pause').click();
+  await expect(page.getByRole('heading', { name: 'BRUSHING PAUSED' })).toBeVisible();
+  await page.locator('#btn-resume').click();
   await expect(page.getByText('GET READY')).toBeVisible();
-  
-  // Exit
-  await page.evaluate(() => {
-    Object.defineProperty(document, 'hidden', { value: true, writable: false });
-    document.dispatchEvent(new Event('visibilitychange'));
-  });
-  await page.click('#btn-exit');
-  
-  await expect(page.getByText('Toothbrush Clinic')).toBeVisible();
+  await page.locator('#btn-pause').click();
+  await page.locator('#btn-exit').click();
+  await expect(page.getByRole('heading', { name: 'Toothbrush Clinic' })).toBeVisible();
 });
