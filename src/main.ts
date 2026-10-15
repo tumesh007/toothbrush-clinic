@@ -172,6 +172,10 @@ async function init() {
           <label style="display:flex; align-items:center; padding:10px; margin:4px 0; border:2px solid ${settings.zoneMode===8?'#007bff':'#ccc'}; border-radius:8px; cursor:pointer;">
             <input type="radio" name="zones" value="8" ${settings.zoneMode===8?'checked':''} style="margin-right:10px;"> 8 sections
           </label>
+          <p style="font-weight:bold; margin:16px 0 6px;">Mouth view</p>
+          <label style="display:block; padding:8px 0;"><input type="radio" name="camera-mode" value="auto" ${settings.cameraMode==='auto'?'checked':''}> Follow brushing zones</label>
+          <label style="display:block; padding:8px 0;"><input type="radio" name="camera-mode" value="manual" ${settings.cameraMode==='manual'?'checked':''}> Manual camera controls</label>
+          <label style="display:block; padding:8px 0;"><input type="checkbox" id="chk-reduced-motion" ${settings.reducedAnimation?'checked':''}> Reduce camera motion</label>
           <p style="font-weight:bold; margin:16px 0 6px;">Chewing surfaces</p>
           <label style="display:flex; align-items:center; padding:12px; border:2px solid ${settings.chewing?'#007bff':'#ccc'}; border-radius:8px; cursor:pointer;">
             <input type="checkbox" id="chk-chewing" ${settings.chewing?'checked':''} style="margin-right:10px; width:18px; height:18px;">
@@ -191,6 +195,9 @@ async function init() {
       const zonesEl   = document.querySelector('input[name="zones"]:checked')    as HTMLInputElement;
       settings.duration  = durationEl ? parseInt(durationEl.value) : settings.duration;
       settings.zoneMode  = zonesEl    ? parseInt(zonesEl.value) as 8|12 : settings.zoneMode;
+      const cameraEl = document.querySelector('input[name="camera-mode"]:checked') as HTMLInputElement;
+      settings.cameraMode = cameraEl ? cameraEl.value as 'auto'|'manual' : settings.cameraMode;
+      settings.reducedAnimation = (document.getElementById('chk-reduced-motion') as HTMLInputElement).checked;
       settings.chewing   = (document.getElementById('chk-chewing')  as HTMLInputElement).checked;
       settings.voice     = (document.getElementById('chk-voice')    as HTMLInputElement).checked;
       settings.sound     = (document.getElementById('chk-sound')    as HTMLInputElement).checked;
@@ -243,7 +250,8 @@ async function init() {
           ${data.remainingSeconds}
         </div>
         <div style="display:flex; justify-content:space-between; align-items:center;">
-          <button id="btn-pause" style="padding:14px 20px; font-size:17px; border-radius:8px; border:none; background:#ffc107; pointer-events:auto;">Pause</button>
+        <button id="btn-reset-view" style="padding:10px 14px; font-size:15px; border-radius:8px; border:1px solid #777; background:white; pointer-events:auto;">Reset View</button>
+        <button id="btn-pause" style="padding:14px 20px; font-size:17px; border-radius:8px; border:none; background:#ffc107; pointer-events:auto;">Pause</button>
           <div style="background:rgba(255,255,255,0.85); padding:8px 12px; border-radius:8px; font-size:13px; text-align:right; max-width:55%;">
             <div style="color:#888;">Next:</div>
             <div style="font-weight:bold;">${nextLabel}</div>
@@ -252,6 +260,7 @@ async function init() {
       </div>
     `);
     document.getElementById('btn-pause')!.onclick = () => controller?.pause();
+    document.getElementById('btn-reset-view')!.onclick = () => mouthView.resetCamera();
   }
 
   function showPaused() {

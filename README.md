@@ -11,6 +11,12 @@ Toothbrush Clinic is a visually guided, step-by-step toothbrushing companion app
 - **Local Persistence:** All settings (duration, modes, sound, and haptic preferences) are saved locally without needing any cloud backend or account creation.
 - **No Analytics / No Ads:** A calm, tracking-free, privacy-first offline experience.
 
+### V2 mouth camera
+
+Automatic mode frames the mapped teeth for each brushing zone using the loaded GLB mesh bounds. In Settings, Manual camera controls turn off automatic zone framing; drag on the mouth to rotate, use Shift+drag on desktop to pan, and pinch or use the wheel to zoom. Camera gestures are attached to the 3D canvas, so the UI controls remain tappable. Zoom is limited to 0.90–1.35×, rotation to ±8°, and pan is bounded. Reset View returns to the whole-mouth view. Reduce camera motion applies zone framing immediately.
+
+The camera controls are unit tested; this environment has no `adb` executable or connected Android device, so Android runtime interaction has not been tested.
+
 ## Technology Stack
 
 - **Frontend:** HTML, TypeScript, Vite
@@ -63,10 +69,10 @@ The project has strict tests covering the state machine, protocol allocation, no
 
 ```bash
 # Run unit tests
-npx vitest run
+npm test
 
-# Run end-to-end UI tests
-npx playwright test
+# Run end-to-end UI tests (the Vite server on port 5173 must be running)
+npm run test:e2e
 ```
 
 ## License

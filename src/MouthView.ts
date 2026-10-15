@@ -28,6 +28,21 @@ export class MouthView implements MouthViewPort {
   private camera: THREE.PerspectiveCamera;
   private renderer: THREE.WebGLRenderer;
   private meshes: Record<string, THREE.Mesh> = {};
+  private cameraMode: 'auto' | 'manual' = 'auto';
+  private reducedMotion = false;
+  private readonly defaultPosition = new THREE.Vector3(0, 2, 22);
+  private readonly defaultTarget = new THREE.Vector3(0, 0, -1);
+  private target = this.defaultTarget.clone();
+  private targetDestination = this.defaultTarget.clone();
+  private destination = this.defaultPosition.clone();
+  private basePosition = this.defaultPosition.clone();
+  private transitionStarted = 0;
+  private transitionFrom = this.defaultPosition.clone();
+  private transitionTargetFrom = this.defaultTarget.clone();
+  private zoom = 1;
+  private yaw = 0;
+  private pitch = 0;
+  private pan = new THREE.Vector2();
 
   private completedMeshNames: Set<string> = new Set();
   private activeMeshNames:   Set<string> = new Set();
@@ -45,8 +60,8 @@ export class MouthView implements MouthViewPort {
 
     this.camera = new THREE.PerspectiveCamera(50, w / h, 0.1, 100);
     // Fixed camera — whole jaw always visible, slightly elevated
-    this.camera.position.set(0, 2, 22);
-    this.camera.lookAt(0, 0, -1);
+    this.camera.position.copy(this.defaultPosition);
+    this.camera.lookAt(this.defaultTarget);
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setPixelRatio(window.devicePixelRatio);
@@ -59,6 +74,8 @@ export class MouthView implements MouthViewPort {
     canvas.style.left     = '0';
     canvas.style.width    = '100%';
     canvas.style.height   = '100%';
+    canvas.style.touchAction = 'none';
+    this.attachGestures(canvas);
     container.appendChild(canvas);
 
     // Lighting
@@ -113,6 +130,14 @@ export class MouthView implements MouthViewPort {
   }
 
   private tick() {
+    if (this.transitionStarted) {
+      const t = Math.min(1, (performance.now() - this.transitionStarted) / 650);
+      const eased = t * t * (3 - 2 * t);
+      this.basePosition.lerpVectors(this.transitionFrom, this.destination, eased);
+      this.target.lerpVectors(this.transitionTargetFrom, this.targetDestination, eased);
+      if (t === 1) this.transitionStarted = 0;
+    }
+    this.applyCameraTransform();
     const now = performance.now();
     if (now - this.lastBlinkTime > 300) {
       this.blinkState    = !this.blinkState;
@@ -193,12 +218,95 @@ export class MouthView implements MouthViewPort {
     });
   }
 
-  // No-ops / stubs kept for interface compatibility
   highlightZone(_zoneId: string): void {}
-  focusZone(_zoneId: string): void {}   // camera is fixed — no zoom
-  resetCamera(): void {}
-  setCameraMode(_mode: 'auto' | 'manual'): void {}
-  setReducedMotion(_reduced: boolean): void {}
+  focusZone(zoneId: string): void {
+    if (this.cameraMode !== 'auto') return;
+    const names = (ZONE_IDS_TO_PAIRS[zoneId] || []).map(key => MOUTH_MANIFEST[key]).filter(Boolean);
+    const bounds = new THREE.Box3();
+    names.forEach(name => { const mesh = this.meshes[name]; if (mesh) bounds.expandByObject(mesh); });
+    if (bounds.isEmpty()) return;
+    const center = bounds.getCenter(new THREE.Vector3());
+    this.transitionFrom.copy(this.basePosition);
+    this.transitionTargetFrom.copy(this.target);
+    this.targetDestination.copy(center);
+    this.destination.copy(center).add(new THREE.Vector3(0, 0.4, 8));
+    this.zoom = 1;
+    this.pan.set(0, 0); this.yaw = 0; this.pitch = 0;
+    if (this.reducedMotion) { this.basePosition.copy(this.destination); this.target.copy(this.targetDestination); this.transitionStarted = 0; }
+    else this.transitionStarted = performance.now();
+  }
+  resetCamera(): void {
+    this.transitionFrom.copy(this.basePosition);
+    this.transitionTargetFrom.copy(this.target);
+    this.targetDestination.copy(this.defaultTarget);
+    this.destination.copy(this.defaultPosition);
+    this.zoom = 1; this.pan.set(0, 0); this.yaw = 0; this.pitch = 0;
+    if (this.reducedMotion) { this.basePosition.copy(this.destination); this.target.copy(this.targetDestination); this.transitionStarted = 0; }
+    else this.transitionStarted = performance.now();
+  }
+  setCameraMode(mode: 'auto' | 'manual'): void { this.cameraMode = mode; }
+  setReducedMotion(reduced: boolean): void { this.reducedMotion = reduced; }
+
+  private applyCameraTransform(): void {
+    const boundedYaw = THREE.MathUtils.clamp(this.yaw, -0.1396, 0.1396);
+    const boundedPitch = THREE.MathUtils.clamp(this.pitch, -0.1396, 0.1396);
+    const boundedPanX = THREE.MathUtils.clamp(this.pan.x, -1.8, 1.8);
+    const boundedPanY = THREE.MathUtils.clamp(this.pan.y, -1.4, 1.4);
+    const focus = this.target.clone().add(new THREE.Vector3(boundedPanX, boundedPanY, 0));
+    const offset = this.basePosition.clone().sub(this.target);
+    offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), boundedYaw);
+    offset.applyAxisAngle(new THREE.Vector3(1, 0, 0), boundedPitch);
+    this.camera.position.copy(focus).add(offset.multiplyScalar(1 / this.zoom));
+    this.camera.lookAt(focus);
+  }
+
+  private attachGestures(canvas: HTMLCanvasElement): void {
+    let pointer: { x: number; y: number; id: number } | null = null;
+    const points = new Map<number, { x: number; y: number }>();
+    let pinchDistance = 0;
+    canvas.addEventListener('pointerdown', e => {
+      pointer = { x: e.clientX, y: e.clientY, id: e.pointerId };
+      points.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (points.size === 2) pinchDistance = this.distanceBetweenPoints([...points.values()]);
+      canvas.setPointerCapture(e.pointerId);
+    });
+    canvas.addEventListener('pointermove', e => {
+      if (!points.has(e.pointerId) || this.cameraMode !== 'manual') return;
+      const previous = points.get(e.pointerId)!;
+      const dx = e.clientX - previous.x, dy = e.clientY - previous.y;
+      const previousDistance = pinchDistance;
+      const previousCenter = points.size === 2 ? this.centerOfPoints([...points.values()]) : null;
+      points.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (points.size === 2) {
+        pinchDistance = this.distanceBetweenPoints([...points.values()]);
+        if (previousDistance > 0) this.zoom = THREE.MathUtils.clamp(this.zoom * pinchDistance / previousDistance, 0.90, 1.35);
+        if (previousCenter) {
+          const center = this.centerOfPoints([...points.values()]);
+          this.pan.x = THREE.MathUtils.clamp(this.pan.x - (center.x - previousCenter.x) * 0.01, -1.8, 1.8);
+          this.pan.y = THREE.MathUtils.clamp(this.pan.y + (center.y - previousCenter.y) * 0.01, -1.4, 1.4);
+        }
+      } else if (pointer?.id === e.pointerId && e.shiftKey) {
+        this.pan.x = THREE.MathUtils.clamp(this.pan.x + dx * 0.01, -1.8, 1.8);
+        this.pan.y = THREE.MathUtils.clamp(this.pan.y - dy * 0.01, -1.4, 1.4);
+      } else if (pointer?.id === e.pointerId) {
+        this.yaw = THREE.MathUtils.clamp(this.yaw + dx * 0.003, -0.1396, 0.1396);
+        this.pitch = THREE.MathUtils.clamp(this.pitch + dy * 0.003, -0.1396, 0.1396);
+      }
+      pointer.x = e.clientX; pointer.y = e.clientY;
+    });
+    const release = (e: PointerEvent) => { points.delete(e.pointerId); pointer = null; pinchDistance = 0; };
+    canvas.addEventListener('pointerup', release);
+    canvas.addEventListener('pointercancel', release);
+    canvas.addEventListener('wheel', e => { if (this.cameraMode !== 'manual') return; e.preventDefault(); this.zoom = THREE.MathUtils.clamp(this.zoom * Math.exp(-e.deltaY * 0.001), 0.90, 1.35); }, { passive: false });
+  }
+
+  private distanceBetweenPoints(points: { x: number; y: number }[]): number {
+    return Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+  }
+
+  private centerOfPoints(points: { x: number; y: number }[]): THREE.Vector2 {
+    return new THREE.Vector2((points[0].x + points[1].x) / 2, (points[0].y + points[1].y) / 2);
+  }
 
   clearHighlight(): void {
     // Session complete — mark all as done
