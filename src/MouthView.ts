@@ -123,7 +123,12 @@ export class MouthView implements MouthViewPort {
       this.renderer.setSize(rw, rh);
     });
 
-    this.renderer.setAnimationLoop(() => {
+    let lastFrameAt = 0;
+    this.renderer.setAnimationLoop((timestamp) => {
+      // A 30 fps cap keeps the 3D view responsive in Android WebView/software
+      // renderers while still providing ~20 frames for a 650 ms camera move.
+      if (timestamp - lastFrameAt < 1000 / 30) return;
+      lastFrameAt = timestamp;
       this.tick();
       this.renderer.render(this.scene, this.camera);
     });

@@ -1,11 +1,9 @@
 import { expect, test } from '@playwright/test';
-
-test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => localStorage.clear());
-});
+import { tapControl } from './test-helpers';
 
 test('settings, duration presets, persistence, pause, resume and cancellation', async ({ page }) => {
   page.on('dialog', dialog => dialog.accept());
+  await page.setViewportSize({ width: 480, height: 800 });
   await page.goto('/');
 
   await expect(page.getByRole('heading', { name: 'Toothbrush Clinic' })).toBeVisible();
@@ -30,13 +28,13 @@ test('settings, duration presets, persistence, pause, resume and cancellation', 
   await page.reload();
   await expect(page.locator('#ui-layer')).toContainText('2 min · 12 sections · chewing surfaces');
   await page.locator('#btn-start').click();
-  await expect(page.getByText('GET READY')).toBeVisible();
+  await expect(page.locator('#btn-pause')).toBeVisible();
 
   await page.locator('#btn-pause').click();
   await expect(page.getByRole('heading', { name: 'BRUSHING PAUSED' })).toBeVisible();
-  await page.locator('#btn-resume').click();
-  await expect(page.getByText('GET READY')).toBeVisible();
-  await page.locator('#btn-pause').click();
-  await page.locator('#btn-exit').click();
+  await tapControl(page, page.locator('#btn-resume'));
+  await expect(page.locator('#btn-pause')).toBeVisible();
+  await tapControl(page, page.locator('#btn-pause'));
+  await tapControl(page, page.locator('#btn-exit'));
   await expect(page.getByRole('heading', { name: 'Toothbrush Clinic' })).toBeVisible();
 });

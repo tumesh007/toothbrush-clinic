@@ -228,6 +228,17 @@ async function init() {
     if (data.state === 'CANCELLED') { showHome(); return; }
     if (data.state === 'PAUSED')    { showPaused(); return; }
 
+    // Keep stable controls attached while only the one-second clock changes.
+    // Replacing the whole UI subtree on each tick detached Pause/Reset buttons
+    // during pointer interaction, especially on slower WebGL devices.
+    const existingClock = document.getElementById('remaining-seconds');
+    const existingZone = document.getElementById('current-zone');
+    if (existingClock && existingZone && existingZone.dataset.state === data.state &&
+        existingZone.dataset.zone === (data.currentZone ?? '')) {
+      existingClock.textContent = String(data.remainingSeconds);
+      return;
+    }
+
     const currentLabel = data.state === 'COUNTDOWN'
       ? 'GET READY'
       : (data.currentZone ? zoneLabel(data.currentZone) : '');
@@ -242,7 +253,7 @@ async function init() {
 
     renderUI(`
       <div style="width:100%; height:100%; display:flex; flex-direction:column; justify-content:space-between; padding:20px; box-sizing:border-box; font-family:sans-serif; color:#333; pointer-events:none;">
-        <div style="background:rgba(255,255,255,0.92); padding:12px 16px; border-radius:10px; text-align:center; font-weight:bold; font-size:20px; border-left:5px solid ${headerColor};">
+        <div id="current-zone" data-state="${data.state}" data-zone="${data.currentZone ?? ''}" style="background:rgba(255,255,255,0.92); padding:12px 16px; border-radius:10px; text-align:center; font-weight:bold; font-size:20px; border-left:5px solid ${headerColor};">
           ${currentLabel}
           ${isChewing ? '<div style="font-size:13px; color:#888; font-weight:normal; margin-top:2px;">Top/chewing surface of back teeth</div>' : ''}
         </div>
