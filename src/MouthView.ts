@@ -90,7 +90,7 @@ export class MouthView implements MouthViewPort {
 
     // Load model
     const loader = new GLTFLoader();
-    loader.load('/mouth.glb', (gltf) => {
+    loader.load('./mouth.glb', (gltf) => {
       const availableNodes = new Set<string>();
       gltf.scene.traverse((child) => {
         if ((child as THREE.Mesh).isMesh) {
