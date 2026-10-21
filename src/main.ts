@@ -250,18 +250,22 @@ async function init() {
 
     renderUI(`
       <div style="width:100%; height:100%; display:flex; flex-direction:column; justify-content:space-between; padding:20px; box-sizing:border-box; font-family:sans-serif; color:#333; pointer-events:none;">
-        <div id="current-zone" data-state="${data.state}" data-zone="${data.currentZone ?? ''}" style="background:rgba(255,255,255,0.92); padding:12px 16px; border-radius:10px; text-align:center; font-weight:bold; font-size:20px; border-left:5px solid ${headerColor};">
-          ${currentLabel}
-          ${isChewing ? '<div style="font-size:13px; color:#888; font-weight:normal; margin-top:2px;">Top/chewing surface of back teeth</div>' : ''}
+        <div style="background:rgba(255,255,255,0.95); backdrop-filter:blur(8px); padding:12px 16px; border-radius:12px; box-shadow:0 4px 16px rgba(0,0,0,0.15); display:flex; align-items:center; justify-content:space-between; border-left:6px solid ${headerColor};">
+          <div id="current-zone" data-state="${data.state}" data-zone="${data.currentZone ?? ''}" style="flex:1;">
+            <div style="font-weight:bold; font-size:19px; color:#1a202c;">${currentLabel}</div>
+            ${isChewing ? '<div style="font-size:12px; color:#718096; margin-top:2px;">Top/chewing surface of back teeth</div>' : '<div style="font-size:12px; color:#718096; margin-top:2px;">Brush with gentle circular motion</div>'}
+          </div>
+          <div style="display:flex; align-items:baseline; background:#edf2f7; padding:6px 14px; border-radius:10px; margin-left:12px;">
+            <span id="remaining-seconds" style="font-size:36px; font-weight:800; font-family:monospace; color:#2d3748; line-height:1;">${data.remainingSeconds}</span>
+            <span style="font-size:14px; font-weight:600; color:#718096; margin-left:2px;">s</span>
+          </div>
         </div>
-        <div id="remaining-seconds" style="font-size:88px; font-weight:bold; text-align:center; color:white; text-shadow:0 2px 8px rgba(0,0,0,0.5);">
-          ${data.remainingSeconds}
-        </div>
+        <div style="flex:1;"></div>
         <div style="display:flex; justify-content:space-between; align-items:center;">
-          <button id="btn-pause" style="padding:14px 20px; font-size:17px; border-radius:8px; border:none; background:#ffc107; pointer-events:auto;">Pause</button>
-          <div style="background:rgba(255,255,255,0.85); padding:8px 12px; border-radius:8px; font-size:13px; text-align:right; max-width:55%;">
-            <div style="color:#888;">Next:</div>
-            <div style="font-weight:bold;">${nextLabel}</div>
+          <button id="btn-pause" style="padding:14px 22px; font-size:17px; font-weight:bold; border-radius:10px; border:none; background:#ffc107; color:#212529; box-shadow:0 3px 10px rgba(0,0,0,0.2); pointer-events:auto;">⏸ Pause</button>
+          <div style="background:rgba(255,255,255,0.92); backdrop-filter:blur(6px); padding:8px 14px; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.1); font-size:13px; text-align:right; max-width:60%;">
+            <div style="color:#718096;">Next section:</div>
+            <div style="font-weight:bold; color:#2d3748;">${nextLabel}</div>
           </div>
         </div>
       </div>

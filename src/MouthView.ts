@@ -56,10 +56,10 @@ interface CameraTarget {
   lookAt: THREE.Vector3;
 }
 
-/** Default (home) camera: centred, full arch visible, slight elevation. */
+/** Default (home) camera: centred, full arch visible with comfortable margins. */
 const DEFAULT_TARGET: CameraTarget = {
-  pos:    new THREE.Vector3(0, 0.15, 14.0),
-  lookAt: new THREE.Vector3(0, 0,     0),
+  pos:    new THREE.Vector3(0, 0.10, 19.5),
+  lookAt: new THREE.Vector3(0, 0,    -1.5),
 };
 
 /**
@@ -87,11 +87,11 @@ const ZONE_CAMERA_TARGETS: Record<string, CameraTarget> = {
   lower_front_inner:   { pos: new THREE.Vector3( 0.0, -2.8,-11.0), lookAt: new THREE.Vector3( 0.0, -1.4,  0.0) },
   lower_left_inner:    { pos: new THREE.Vector3(-3.0, -2.2, -9.5), lookAt: new THREE.Vector3(-2.5, -1.4, -1.5) },
 
-  // ---- chewing / occlusal (camera from above/below looking at occlusal surface) ----
-  upper_right_chewing: { pos: new THREE.Vector3( 3.2,  8.0, -2.5), lookAt: new THREE.Vector3( 2.8,  1.4, -2.5) },
-  upper_left_chewing:  { pos: new THREE.Vector3(-3.2,  8.0, -2.5), lookAt: new THREE.Vector3(-2.8,  1.4, -2.5) },
-  lower_right_chewing: { pos: new THREE.Vector3( 3.2, -8.0, -2.5), lookAt: new THREE.Vector3( 2.8, -1.4, -2.5) },
-  lower_left_chewing:  { pos: new THREE.Vector3(-3.2, -8.0, -2.5), lookAt: new THREE.Vector3(-2.8, -1.4, -2.5) },
+  // ---- chewing / occlusal (angled view to see biting tables clearly) ----
+  upper_right_chewing: { pos: new THREE.Vector3( 2.2, -2.8, 8.5), lookAt: new THREE.Vector3( 2.5,  0.8, -2.2) },
+  upper_left_chewing:  { pos: new THREE.Vector3(-2.2, -2.8, 8.5), lookAt: new THREE.Vector3(-2.5,  0.8, -2.2) },
+  lower_right_chewing: { pos: new THREE.Vector3( 2.2,  2.8, 8.5), lookAt: new THREE.Vector3( 2.5, -0.8, -2.2) },
+  lower_left_chewing:  { pos: new THREE.Vector3(-2.2,  2.8, 8.5), lookAt: new THREE.Vector3(-2.5, -0.8, -2.2) },
 
   // ---- 8-zone outer ----
   q_upper_right_outer: { pos: new THREE.Vector3( 2.8,  1.6, 11.0), lookAt: new THREE.Vector3( 2.2,  1.2, -1.0) },
@@ -278,23 +278,28 @@ export class MouthView implements MouthViewPort {
   // Internal: lighting
   // ---------------------------------------------------------------------------
   private buildLighting(): void {
-    // Ambient — slightly warm to mimic dental examination light
-    const ambient = new THREE.AmbientLight(0xfff8f0, 0.65);
+    // Ambient — soft studio ambient
+    const ambient = new THREE.AmbientLight(0xffffff, 0.85);
     this.scene.add(ambient);
 
-    // Key light — from slightly upper-front
-    const key = new THREE.DirectionalLight(0xffffff, 1.1);
-    key.position.set(2, 8, 12);
+    // Key light — from upper-front-right
+    const key = new THREE.DirectionalLight(0xffffff, 1.30);
+    key.position.set(3, 8, 14);
     this.scene.add(key);
 
-    // Fill light — slight blue tint from upper-left
-    const fill = new THREE.DirectionalLight(0xb0c8ff, 0.35);
-    fill.position.set(-6, 4, 8);
+    // Fill light — gentle cool blue from left
+    const fill = new THREE.DirectionalLight(0xcce2ff, 0.70);
+    fill.position.set(-6, 4, 10);
     this.scene.add(fill);
 
-    // Rim / back light — subtle to give depth
-    const rim = new THREE.DirectionalLight(0xffffff, 0.20);
-    rim.position.set(0, -6, -10);
+    // Under-bounce light — softens shadows from below
+    const bounce = new THREE.DirectionalLight(0xfff3ea, 0.50);
+    bounce.position.set(0, -6, 8);
+    this.scene.add(bounce);
+
+    // Rim light — subtle edge highlight to define tooth silhouettes
+    const rim = new THREE.DirectionalLight(0xffffff, 0.40);
+    rim.position.set(0, 4, -12);
     this.scene.add(rim);
   }
 
@@ -347,18 +352,18 @@ export class MouthView implements MouthViewPort {
       gltf.scene.traverse((child) => {
         if ((child as THREE.Mesh).isMesh) {
           const mesh = child as THREE.Mesh;
+          mesh.geometry.computeVertexNormals();
           const isGum = mesh.name.startsWith('gum_');
           mesh.material = isGum
             ? new THREE.MeshStandardMaterial({
-                color:     0xd9768a,  // gum pink
-                roughness: 0.75,
+                color:     0xec6d81,  // healthy soft coral pink
+                roughness: 0.55,
                 metalness: 0.0,
               })
             : new THREE.MeshStandardMaterial({
-                color:     0xf5f0e8,  // enamel ivory
-                roughness: 0.30,
+                color:     0xfcfcf9,  // pearlescent enamel
+                roughness: 0.20,
                 metalness: 0.05,
-                envMapIntensity: 0.4,
               });
           availableNodes.add(mesh.name);
           this.meshes[mesh.name] = mesh;
@@ -485,37 +490,37 @@ export class MouthView implements MouthViewPort {
 
       if (this.activeMeshNames.has(name)) {
         mat.wireframe         = false;
-        mat.color.setHex(0x00e676);    // bright green
+        mat.color.setHex(0x00e676);    // bright mint green
         mat.opacity           = 1.0;
         mat.transparent       = false;
-        mat.emissive.setHex(0x007744);
-        mat.emissiveIntensity = 0.35;
-        mat.roughness         = 0.25;
+        mat.emissive.setHex(0x00a850);
+        mat.emissiveIntensity = 0.45;
+        mat.roughness         = 0.15;
       } else if (this.upcomingMeshNames.has(name)) {
         mat.wireframe         = false;
-        mat.color.setHex(this.blinkState ? 0xffab00 : 0x666644);
-        mat.opacity           = 0.90;
-        mat.transparent       = true;
-        mat.emissive.setHex(0x000000);
-        mat.emissiveIntensity = 0;
-        mat.roughness         = 0.40;
+        mat.color.setHex(this.blinkState ? 0xffb300 : 0x777755);
+        mat.opacity           = 0.95;
+        mat.transparent       = false;
+        mat.emissive.setHex(this.blinkState ? 0xff8f00 : 0x000000);
+        mat.emissiveIntensity = this.blinkState ? 0.35 : 0;
+        mat.roughness         = 0.25;
       } else if (this.completedMeshNames.has(name)) {
         mat.wireframe         = false;
-        mat.color.setHex(0x90caf9);    // light blue — done
+        mat.color.setHex(0x81d4fa);    // clean sky-blue fresh finish
         mat.opacity           = 1.0;
         mat.transparent       = false;
-        mat.emissive.setHex(0x000000);
-        mat.emissiveIntensity = 0;
-        mat.roughness         = 0.30;
+        mat.emissive.setHex(0x0288d1);
+        mat.emissiveIntensity = 0.18;
+        mat.roughness         = 0.20;
       } else {
-        // Default / not-yet: enamel ivory
+        // Default / untouched: pearlescent enamel
         mat.wireframe         = false;
-        mat.color.setHex(0xf5f0e8);
+        mat.color.setHex(0xfcfcf9);
         mat.opacity           = 1.0;
         mat.transparent       = false;
-        mat.emissive.setHex(0x000000);
-        mat.emissiveIntensity = 0;
-        mat.roughness         = 0.30;
+        mat.emissive.setHex(0x181816);
+        mat.emissiveIntensity = 0.12;
+        mat.roughness         = 0.20;
       }
       mat.needsUpdate = true;
     });
