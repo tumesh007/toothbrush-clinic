@@ -4,13 +4,16 @@
 
 Toothbrush Clinic leads the user through a complete, medically adequate brushing routine using a live 3D mouth model that highlights the exact surface being brushed. All logic runs locally — no accounts, no cloud, no ads, no tracking.
 
+🌐 **Live Web App**: [https://tumesh007.github.io/toothbrush-clinic/](https://tumesh007.github.io/toothbrush-clinic/)
+
 ---
 
 ## Table of Contents
 
+- [Live Web App](#live-web-app)
 - [Screenshots](#screenshots)
 - [Features](#features)
-- [Download](#download)
+- [Download & Android App](#download)
 - [Technology Stack](#technology-stack)
 - [Architecture Overview](#architecture-overview)
 - [Dental Protocol](#dental-protocol)
@@ -22,6 +25,18 @@ Toothbrush Clinic leads the user through a complete, medically adequate brushing
 - [Project Structure](#project-structure)
 - [Changelog](#changelog)
 - [License](#license)
+
+---
+
+## Live Web App
+
+Try Toothbrush Clinic directly in your browser without installing anything:
+
+👉 **[https://tumesh007.github.io/toothbrush-clinic/](https://tumesh007.github.io/toothbrush-clinic/)**
+
+- **Cross-platform**: Runs on any device with a modern browser and WebGL support (Android, iOS, Windows, macOS, Linux).
+- **Responsive**: Adapts dynamically to portrait mobile phones, tablets, and desktop displays.
+- **Privacy & offline ready**: All 3D rendering and dental timer routines run entirely client-side. No tracking, no cookies, no external API calls.
 
 ---
 
@@ -232,10 +247,10 @@ Generated programmatically using trimesh (MIT). No third-party dental model asse
 
 | Property | Value |
 |---|---|
-| Position | `(0, 0.15, 14)` |
-| Look-at | `(0, 0, 0)` |
+| Position | `(0, 0.10, 19.5)` |
+| Look-at | `(0, 0, -1.5)` |
 | FOV | 40° |
-| Background | Dark navy `#0d1b2a` |
+| Background | Dark slate navy `#101726` |
 
 Upper arch is above (`y ≈ +1.4`), lower below (`y ≈ −1.4`). Anatomical right is screen right. Full arch visible without clipping.
 
