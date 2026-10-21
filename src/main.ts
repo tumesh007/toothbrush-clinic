@@ -172,6 +172,10 @@ async function init() {
           <label style="display:flex; align-items:center; padding:10px; margin:4px 0; border:2px solid ${settings.zoneMode===8?'#007bff':'#ccc'}; border-radius:8px; cursor:pointer;">
             <input type="radio" name="zones" value="8" ${settings.zoneMode===8?'checked':''} style="margin-right:10px;"> 8 sections
           </label>
+          <p style="font-weight:bold; margin:16px 0 6px;">Mouth view</p>
+          <label style="display:block; padding:8px 0;"><input type="radio" name="camera-mode" value="auto" ${settings.cameraMode==='auto'?'checked':''}> Follow brushing zones</label>
+          <label style="display:block; padding:8px 0;"><input type="radio" name="camera-mode" value="manual" ${settings.cameraMode==='manual'?'checked':''}> Manual camera controls</label>
+          <label style="display:block; padding:8px 0;"><input type="checkbox" id="chk-reduced-motion" ${settings.reducedAnimation?'checked':''}> Reduce camera motion</label>
           <p style="font-weight:bold; margin:16px 0 6px;">Chewing surfaces</p>
           <label style="display:flex; align-items:center; padding:12px; border:2px solid ${settings.chewing?'#007bff':'#ccc'}; border-radius:8px; cursor:pointer;">
             <input type="checkbox" id="chk-chewing" ${settings.chewing?'checked':''} style="margin-right:10px; width:18px; height:18px;">
@@ -191,6 +195,9 @@ async function init() {
       const zonesEl   = document.querySelector('input[name="zones"]:checked')    as HTMLInputElement;
       settings.duration  = durationEl ? parseInt(durationEl.value) : settings.duration;
       settings.zoneMode  = zonesEl    ? parseInt(zonesEl.value) as 8|12 : settings.zoneMode;
+      const cameraEl = document.querySelector('input[name="camera-mode"]:checked') as HTMLInputElement;
+      settings.cameraMode = cameraEl ? cameraEl.value as 'auto'|'manual' : settings.cameraMode;
+      settings.reducedAnimation = (document.getElementById('chk-reduced-motion') as HTMLInputElement).checked;
       settings.chewing   = (document.getElementById('chk-chewing')  as HTMLInputElement).checked;
       settings.voice     = (document.getElementById('chk-voice')    as HTMLInputElement).checked;
       settings.sound     = (document.getElementById('chk-sound')    as HTMLInputElement).checked;
@@ -221,6 +228,14 @@ async function init() {
     if (data.state === 'CANCELLED') { showHome(); return; }
     if (data.state === 'PAUSED')    { showPaused(); return; }
 
+    const existingClock = document.getElementById('remaining-seconds');
+    const existingZone = document.getElementById('current-zone');
+    if (existingClock && existingZone && existingZone.dataset.state === data.state &&
+        existingZone.dataset.zone === (data.currentZone ?? '')) {
+      existingClock.textContent = String(data.remainingSeconds);
+      return;
+    }
+
     const currentLabel = data.state === 'COUNTDOWN'
       ? 'GET READY'
       : (data.currentZone ? zoneLabel(data.currentZone) : '');
@@ -235,11 +250,11 @@ async function init() {
 
     renderUI(`
       <div style="width:100%; height:100%; display:flex; flex-direction:column; justify-content:space-between; padding:20px; box-sizing:border-box; font-family:sans-serif; color:#333; pointer-events:none;">
-        <div style="background:rgba(255,255,255,0.92); padding:12px 16px; border-radius:10px; text-align:center; font-weight:bold; font-size:20px; border-left:5px solid ${headerColor};">
+        <div id="current-zone" data-state="${data.state}" data-zone="${data.currentZone ?? ''}" style="background:rgba(255,255,255,0.92); padding:12px 16px; border-radius:10px; text-align:center; font-weight:bold; font-size:20px; border-left:5px solid ${headerColor};">
           ${currentLabel}
           ${isChewing ? '<div style="font-size:13px; color:#888; font-weight:normal; margin-top:2px;">Top/chewing surface of back teeth</div>' : ''}
         </div>
-        <div style="font-size:88px; font-weight:bold; text-align:center; color:white; text-shadow:0 2px 8px rgba(0,0,0,0.5);">
+        <div id="remaining-seconds" style="font-size:88px; font-weight:bold; text-align:center; color:white; text-shadow:0 2px 8px rgba(0,0,0,0.5);">
           ${data.remainingSeconds}
         </div>
         <div style="display:flex; justify-content:space-between; align-items:center;">
