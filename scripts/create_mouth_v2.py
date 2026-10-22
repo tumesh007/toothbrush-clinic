@@ -4,10 +4,12 @@ create_mouth_v2.py – Anatomical, organic 3D mouth model for Toothbrush Clinic 
 Generates public/mouth.glb with:
   - Exactly 72 addressable tooth surface meshes (matching MOUTH_MANIFEST):
       28 outer + 28 inner + 16 chewing (posteriors only) = 72 surfaces
-  - 2 symmetric, natural gum arches (gum_upper, gum_lower) that frame
-    the tooth roots from above and below across both left and right jaws.
-  - Organic, anatomical tooth morphology (chisel incisors, pointed canines,
-    bicuspid premolars, 4-cusped molars with natural grooves).
+  - 2 symmetric, natural gum arches (gum_upper, gum_lower) framing tooth roots.
+  - Anatomical tooth morphology:
+      - Incisors: chisel/spade profile with incisal edge and rounded corners
+      - Canines: pointed crowns with sloping shoulders
+      - Premolars: wide bicuspids with buccal & lingual cusps
+      - Molars: large 4-cusped occlusal tables with developmental grooves
 """
 
 import trimesh
@@ -26,7 +28,7 @@ POSTERIOR_IDS = {
 }
 
 # Angular placement along dental arch ellipse (from midline to back molars)
-angles_deg = [4.5, 13.5, 24.0, 37.0, 52.0, 68.0, 84.0]
+angles_deg = [4.2, 12.5, 22.0, 33.5, 46.5, 61.0, 76.5]
 
 ARCH_A = 4.8   # width semi-axis (X)
 ARCH_B = 5.6   # depth semi-axis (Z)
@@ -39,11 +41,11 @@ LOWER_GUM_Y = -1.30
 CROWN_DIMS = [
     (0.82, 1.05, 0.35),  # ci: central incisor
     (0.68, 0.95, 0.32),  # li: lateral incisor
-    (0.72, 1.15, 0.42),  # c:  canine
-    (0.74, 0.82, 0.62),  # pm1: 1st premolar
-    (0.76, 0.80, 0.65),  # pm2: 2nd premolar
-    (1.02, 0.84, 0.85),  # m1:  1st molar
-    (0.92, 0.78, 0.78),  # m2:  2nd molar
+    (0.74, 1.15, 0.42),  # c:  canine
+    (0.84, 0.82, 0.72),  # pm1: 1st premolar
+    (0.88, 0.80, 0.75),  # pm2: 2nd premolar
+    (1.16, 0.86, 0.98),  # m1:  1st molar
+    (1.10, 0.80, 0.92),  # m2:  2nd molar
 ]
 
 def make_anatomical_crown(type_index, w, h, d, is_upper):
@@ -101,19 +103,23 @@ def make_anatomical_crown(type_index, w, h, d, is_upper):
 
         return trimesh.Trimesh(vertices=v, faces=m.faces)
 
-    elif type_index in (3, 4): # Premolars (pm1, pm2) - bicuspid
+    elif type_index in (3, 4): # Premolars (pm1, pm2) - wide bicuspid
         m = trimesh.creation.box(extents=[w, h, d]).subdivide().subdivide().subdivide()
         v = m.vertices.copy()
 
-        theta = np.arctan2(v[:, 2], v[:, 0])
+        x_norm = v[:, 0] / (w * 0.5)
+        z_norm = v[:, 2] / (d * 0.5)
+
+        theta = np.arctan2(z_norm, x_norm)
         cos_t = np.abs(np.cos(theta)) + 1e-6
         sin_t = np.abs(np.sin(theta)) + 1e-6
         squircle_r = 1.0 / (cos_t**4 + sin_t**4)**0.25
-        r_xz = np.sqrt(v[:, 0]**2 + v[:, 2]**2) + 1e-6
-        r_new = r_xz * (0.80 + 0.20 * squircle_r)
+        r_norm = np.sqrt(x_norm**2 + z_norm**2)
 
-        v[:, 0] = (r_new * np.cos(theta)) * (w * 0.48)
-        v[:, 2] = (r_new * np.sin(theta)) * (d * 0.48)
+        # Rounded squircle contour without accidental shrinking
+        r_target = r_norm * (0.80 + 0.20 * squircle_r)
+        v[:, 0] = np.clip(r_target * np.cos(theta), -1.0, 1.0) * (w * 0.5)
+        v[:, 2] = np.clip(r_target * np.sin(theta), -1.0, 1.0) * (d * 0.5)
 
         y_norm = (v[:, 1] * biting_dir / (h * 0.5) + 1.0) * 0.5
         occlusal = y_norm > 0.4
@@ -127,36 +133,40 @@ def make_anatomical_crown(type_index, w, h, d, is_upper):
         v[occlusal, 1] += (b_cusp[occlusal] + l_cusp[occlusal] - groove[occlusal]) * biting_dir
         return trimesh.Trimesh(vertices=v, faces=m.faces)
 
-    else: # Molars (m1, m2) - 4-cusped occlusal table with central pit
+    else: # Molars (m1, m2) - large, powerful 4-cusped occlusal table
         m = trimesh.creation.box(extents=[w, h, d]).subdivide().subdivide().subdivide()
         v = m.vertices.copy()
 
-        theta = np.arctan2(v[:, 2], v[:, 0])
+        x_norm = v[:, 0] / (w * 0.5)
+        z_norm = v[:, 2] / (d * 0.5)
+
+        theta = np.arctan2(z_norm, x_norm)
         cos_t = np.abs(np.cos(theta)) + 1e-6
         sin_t = np.abs(np.sin(theta)) + 1e-6
         squircle_r = 1.0 / (cos_t**4 + sin_t**4)**0.25
-        r_xz = np.sqrt(v[:, 0]**2 + v[:, 2]**2) + 1e-6
-        r_new = r_xz * (0.82 + 0.18 * squircle_r)
+        r_norm = np.sqrt(x_norm**2 + z_norm**2)
 
-        v[:, 0] = (r_new * np.cos(theta)) * (w * 0.48)
-        v[:, 2] = (r_new * np.sin(theta)) * (d * 0.48)
+        # Rounded squircle contour keeping full anatomical molar dimensions
+        r_target = r_norm * (0.82 + 0.18 * squircle_r)
+        v[:, 0] = np.clip(r_target * np.cos(theta), -1.0, 1.0) * (w * 0.5)
+        v[:, 2] = np.clip(r_target * np.sin(theta), -1.0, 1.0) * (d * 0.5)
 
         y_norm = (v[:, 1] * biting_dir / (h * 0.5) + 1.0) * 0.5
         occlusal = y_norm > 0.35
 
         cusp_offsets = [
-            (-w * 0.24,  d * 0.23),
-            ( w * 0.24,  d * 0.23),
-            (-w * 0.24, -d * 0.23),
-            ( w * 0.24, -d * 0.23),
+            (-w * 0.25,  d * 0.24),
+            ( w * 0.25,  d * 0.24),
+            (-w * 0.25, -d * 0.24),
+            ( w * 0.25, -d * 0.24),
         ]
         cusp_elev = np.zeros(len(v))
         for cx, cz in cusp_offsets:
             dist_sq = (v[:, 0] - cx)**2 + (v[:, 2] - cz)**2
-            cusp_elev += 0.09 * np.exp(-dist_sq / 0.035)
+            cusp_elev += 0.09 * np.exp(-dist_sq / 0.04)
 
         dist_center = (v[:, 0])**2 + (v[:, 2])**2
-        pit_depth = 0.045 * np.exp(-dist_center / 0.035)
+        pit_depth = 0.045 * np.exp(-dist_center / 0.04)
 
         v[occlusal, 1] += (cusp_elev[occlusal] - pit_depth[occlusal]) * biting_dir
         return trimesh.Trimesh(vertices=v, faces=m.faces)
@@ -167,7 +177,7 @@ def partition_tooth_surfaces(tooth_mesh, is_posterior, is_upper):
     biting_dir = -1.0 if is_upper else 1.0
 
     if is_posterior:
-        chewing_mask = (face_normals[:, 1] * biting_dir > 0.30) & (face_centers[:, 1] * biting_dir > -0.05)
+        chewing_mask = (face_normals[:, 1] * biting_dir > 0.28) & (face_centers[:, 1] * biting_dir > -0.05)
         outer_mask = (~chewing_mask) & (face_centers[:, 2] >= 0.0)
         inner_mask = (~chewing_mask) & (~outer_mask)
 
@@ -193,11 +203,11 @@ def make_full_gum_arch(is_upper, segments=64):
     ridge_h = 0.85 * sign_y
 
     profile = [
-        (-0.52, 0.0),                  # lingual margin
-        (-0.35, ridge_h * 0.45),       # lingual curvature
+        (-0.65, 0.0),                  # lingual margin
+        (-0.45, ridge_h * 0.45),       # lingual curvature
         ( 0.00, ridge_h * 0.95),       # ridge apex
-        ( 0.38, ridge_h * 0.45),       # buccal curvature
-        ( 0.60, 0.0),                  # buccal margin
+        ( 0.48, ridge_h * 0.45),       # buccal curvature
+        ( 0.75, 0.0),                  # buccal margin
     ]
 
     verts = []
