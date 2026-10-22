@@ -4,5 +4,7 @@ venv/
 __pycache__/
 *.pyc
 .DS_Store
-android/app/*.keystore
-android/app/*.jks
+*.keystore
+*.jks
+*.idsig
+android/local.properties
