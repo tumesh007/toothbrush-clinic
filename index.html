@@ -2,18 +2,76 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Toothbrush Clinic - P0 Spike</title>
     <style>
-      body { touch-action: none; margin: 0; overflow: hidden; background-color: #f0f0f0; font-family: sans-serif; }
-      #app { width: 100vw; height: 100vh; }
-      #controls { position: absolute; top: 10px; left: 10px; background: rgba(255,255,255,0.8); padding: 10px; border-radius: 8px; max-height: 90vh; overflow-y: auto;}
-      button { display: block; margin-bottom: 5px; width: 100%; text-align: left; padding: 5px;}
+      :root {
+        --app-vh: 1vh;
+      }
+
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        max-width: 100%;
+        background-color: #f0f0f0;
+        font-family: sans-serif;
+        overflow-x: hidden;
+        -webkit-text-size-adjust: 100%;
+      }
+
+      body {
+        min-height: 100dvh;
+        min-height: calc(var(--app-vh, 1vh) * 100);
+        touch-action: manipulation;
+      }
+
+      #app {
+        position: relative;
+        width: 100%;
+        max-width: 100%;
+        min-height: 100dvh;
+        min-height: calc(var(--app-vh, 1vh) * 100);
+        overflow: visible;
+        background-color: #f0f0f0;
+      }
+
+      #controls {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background: rgba(255,255,255,0.8);
+        padding: 10px;
+        border-radius: 8px;
+        max-height: 90vh;
+        overflow-y: auto;
+      }
+
+      button {
+        display: block;
+        margin-bottom: 5px;
+        width: 100%;
+        text-align: left;
+        padding: 5px;
+        min-height: 44px;
+        box-sizing: border-box;
+      }
     </style>
   </head>
   <body>
     <div id="controls"></div>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
+    <script>
+      const setViewportHeight = () => {
+        const vh = window.innerHeight * 0.01;
+        document.documentElement.style.setProperty('--app-vh', `${vh}px`);
+      };
+
+      setViewportHeight();
+      window.addEventListener('resize', setViewportHeight);
+      window.addEventListener('orientationchange', setViewportHeight);
+      window.visualViewport?.addEventListener('resize', setViewportHeight);
+    </script>
   </body>
 </html>
