@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [master, feature/v2-3d-mouth-camera]
+    branches: [master, feature/v2-3d-mouth-camera, responsive-fix]
   workflow_dispatch:
 
 permissions:

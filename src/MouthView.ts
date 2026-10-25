@@ -191,8 +191,8 @@ export class MouthView implements MouthViewPort {
     canvas.style.left     = '0';
     canvas.style.width    = '100%';
     canvas.style.height   = '100%';
-    // Only capture touches on the canvas element itself
-    canvas.style.touchAction = 'none';
+    // Horizontal drags and pinches control the camera; vertical swipes can scroll the page.
+    canvas.style.touchAction = 'pan-y';
     container.appendChild(canvas);
 
     this.buildLighting();
@@ -566,7 +566,7 @@ export class MouthView implements MouthViewPort {
     // Do not capture pointer if the reset button was the target — let it handle it.
     if ((e.target as HTMLElement).id === 'mouth-reset-view') return;
 
-    e.preventDefault();
+    if (e.pointerType === 'mouse') e.preventDefault();
     e.stopPropagation();
     this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
@@ -579,7 +579,7 @@ export class MouthView implements MouthViewPort {
 
   private onPointerMove(e: PointerEvent): void {
     if (!this.pointers.has(e.pointerId)) return;
-    e.preventDefault();
+    if (e.pointerType === 'mouse') e.preventDefault();
     e.stopPropagation();
 
     const prev = this.pointers.get(e.pointerId)!;

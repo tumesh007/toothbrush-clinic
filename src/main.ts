@@ -13,22 +13,19 @@ class ClockAdapter {
 async function init() {
   const container = document.getElementById('app')!;
   
-  // Ensure the app container fills the screen with real pixel dimensions
+  // Keep the app in document flow so screens can grow and scroll naturally.
   container.style.position = 'relative';
-  container.style.width = '100vw';
-  container.style.height = '100vh';
-  container.style.overflow = 'hidden';
+  container.style.width = '100%';
 
   const mouthViewContainer = document.createElement('div');
   mouthViewContainer.id = 'mouth-view-container';
   mouthViewContainer.style.width = '100%';
-  mouthViewContainer.style.height = '100%';
-  mouthViewContainer.style.position = 'absolute';
-  mouthViewContainer.style.top = '0';
-  mouthViewContainer.style.left = '0';
+  mouthViewContainer.style.height = '100vh';
+  mouthViewContainer.style.height = '100dvh';
+  mouthViewContainer.style.position = 'fixed';
+  mouthViewContainer.style.inset = '0';
   mouthViewContainer.style.zIndex = '1';
-  // touch-action on the CONTAINER too, belt-and-suspenders for Android
-  mouthViewContainer.style.touchAction = 'none';
+  mouthViewContainer.style.touchAction = 'pan-y';
   container.appendChild(mouthViewContainer);
 
   // Small forced layout to ensure clientWidth/clientHeight are non-zero before Three.js reads them
@@ -43,13 +40,11 @@ async function init() {
 
   const uiLayer = document.createElement('div');
   uiLayer.id = 'ui-layer';
-  uiLayer.style.position = 'absolute';
-  uiLayer.style.top = '0';
-  uiLayer.style.left = '0';
+  uiLayer.style.position = 'relative';
   uiLayer.style.width = '100%';
-  uiLayer.style.height = '100%';
+  uiLayer.style.minHeight = '100vh';
+  uiLayer.style.minHeight = '100dvh';
   uiLayer.style.zIndex = '10';
-  // MUST be none so touches pass through to the Three.js canvas below
   uiLayer.style.pointerEvents = 'none';
   container.appendChild(uiLayer);
   
@@ -70,11 +65,6 @@ async function init() {
   
   function renderUI(html: string) {
     uiLayer.innerHTML = html;
-    // Enable pointer events on buttons inside uiLayer
-    const elements = uiLayer.querySelectorAll('*');
-    elements.forEach(el => {
-      (el as HTMLElement).style.pointerEvents = 'auto';
-    });
   }
   
   function zoneLabel(zoneId: string): string {
@@ -120,7 +110,7 @@ async function init() {
     const sects = sectionCount();
 
     renderUI(`
-      <div style="background:white; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:sans-serif; pointer-events:auto;">
+      <div class="ui-screen" style="background:white; display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:sans-serif; pointer-events:auto;">
         <h1 style="margin-bottom:4px;">&#129463; Toothbrush Clinic</h1>
         <p style="color:#555; margin:4px 0 20px;">${mins} min &middot; ${sects} sections${settings.chewing ? ' &middot; chewing surfaces' : ''}</p>
         <button id="btn-start" style="padding:16px 40px; font-size:22px; margin:8px; border-radius:10px; border:none; background:#007bff; color:white; width:80%;">Start Brushing</button>
@@ -134,7 +124,7 @@ async function init() {
 
   function showParentGate(onSuccess: () => void) {
     renderUI(`
-      <div style="background: white; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:sans-serif; pointer-events: auto;">
+      <div class="ui-screen" style="background: white; display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:sans-serif; pointer-events: auto;">
         <h2>Parent Gate</h2>
         <p>What is 2 + 3?</p>
         <div>
@@ -156,7 +146,7 @@ async function init() {
 
   function showSettings() {
     renderUI(`
-      <div style="background:white; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; padding:20px; box-sizing:border-box; font-family:sans-serif; overflow-y:auto; pointer-events:auto;">
+      <div class="ui-screen ui-screen--settings" style="background:white; display:flex; flex-direction:column; align-items:center; font-family:sans-serif; pointer-events:auto;">
         <h2>Settings</h2>
         <div style="width:90%; max-width:400px;">
           <p style="font-weight:bold; margin-bottom:6px;">Brushing time</p>
@@ -249,7 +239,7 @@ async function init() {
     const headerColor = isChewing ? '#ff8f00' : '#007bff';
 
     renderUI(`
-      <div style="width:100%; height:100%; display:flex; flex-direction:column; justify-content:space-between; padding:20px; box-sizing:border-box; font-family:sans-serif; color:#333; pointer-events:none;">
+      <div class="ui-screen" style="display:flex; flex-direction:column; justify-content:space-between; gap:16px; font-family:sans-serif; color:#333; pointer-events:none;">
         <div style="background:rgba(255,255,255,0.95); backdrop-filter:blur(8px); padding:12px 16px; border-radius:12px; box-shadow:0 4px 16px rgba(0,0,0,0.15); display:flex; align-items:center; justify-content:space-between; border-left:6px solid ${headerColor};">
           <div id="current-zone" data-state="${data.state}" data-zone="${data.currentZone ?? ''}" style="flex:1;">
             <div style="font-weight:bold; font-size:19px; color:#1a202c;">${currentLabel}</div>
@@ -275,7 +265,7 @@ async function init() {
 
   function showPaused() {
     renderUI(`
-      <div style="background: rgba(255,255,255,0.9); width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:sans-serif; pointer-events: auto;">
+      <div class="ui-screen" style="background: rgba(255,255,255,0.9); display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:sans-serif; pointer-events: auto;">
         <h2>BRUSHING PAUSED</h2>
         <button id="btn-resume" style="padding:15px 30px; font-size:20px; margin: 10px; border-radius: 8px; border:none; background:#28a745; color:white;">Resume</button>
         <button id="btn-restart" style="padding:15px 30px; font-size:20px; margin: 10px; border-radius: 8px; border:1px solid #ccc; background:white;">Restart</button>
@@ -292,7 +282,7 @@ async function init() {
     const mins  = Math.floor(protocol.requestedBrushingDuration / 60);
     const sects = protocol.slots.length;
     renderUI(`
-      <div style="background:white; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:sans-serif; pointer-events:auto;">
+      <div class="ui-screen" style="background:white; display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:sans-serif; pointer-events:auto;">
         <div style="font-size:64px;">&#127881;</div>
         <h2 style="margin:8px 0;">BRUSHING COMPLETE!</h2>
         <p style="color:#555; font-size:18px;">You brushed all sections!</p>
