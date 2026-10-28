@@ -1,11 +1,13 @@
 export interface VoicePort {
   speak(text: string): Promise<void>;
   stop(): void;
+  prime?(): void;
 }
 
 export interface SoundPort {
   playChime(): void;
   playTick(): void;
+  prime?(): void;
 }
 
 export interface HapticPort {

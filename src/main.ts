@@ -1,4 +1,5 @@
 import { MouthView } from './MouthView';
+import confetti from 'canvas-confetti';
 import { SessionStateMachine } from './protocol/StateMachine';
 import { BrushingController } from './BrushingController';
 import { LocalStorageSettingsStore, WebVoicePort, WebSoundPort, WebHapticPort, WebKeepAwakePort } from './adapters';
@@ -200,6 +201,8 @@ async function init() {
   }
 
   async function startBrushing() {
+    voice.prime?.();
+    sound.prime?.();
     mouthViewContainer.style.visibility = 'visible';
     renderUI('');
 
@@ -277,22 +280,55 @@ async function init() {
     document.getElementById('btn-exit')!.onclick = () => { if (confirm("Are you sure you want to exit?")) controller?.cancel(); };
   }
 
+  function triggerCelebration() {
+    try {
+      confetti({
+        particleCount: 90,
+        spread: 80,
+        origin: { y: 0.6 },
+        colors: ['#00e676', '#ffb300', '#007bff', '#ec6d81', '#9c27b0'],
+      });
+      setTimeout(() => {
+        confetti({
+          particleCount: 45,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0.1, y: 0.7 },
+          colors: ['#00e676', '#ffb300', '#007bff'],
+        });
+      }, 200);
+      setTimeout(() => {
+        confetti({
+          particleCount: 45,
+          angle: 120,
+          spread: 55,
+          origin: { x: 0.9, y: 0.7 },
+          colors: ['#00e676', '#ffb300', '#ec6d81'],
+        });
+      }, 400);
+    } catch (e) {
+      // Confetti is a visual enhancement; safe to ignore in environments without canvas
+    }
+  }
+
   function showComplete(data: SessionData, protocol: any) {
     mouthViewContainer.style.visibility = 'hidden';
     const mins  = Math.floor(protocol.requestedBrushingDuration / 60);
     const sects = protocol.slots.length;
     renderUI(`
-      <div class="ui-screen" style="background:white; display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:sans-serif; pointer-events:auto;">
-        <div style="font-size:64px;">&#127881;</div>
-        <h2 style="margin:8px 0;">BRUSHING COMPLETE!</h2>
-        <p style="color:#555; font-size:18px;">You brushed all sections!</p>
-        <div style="margin:16px 0; text-align:center; color:#333;">
-          <div style="font-size:24px; font-weight:bold;">${mins} minute${mins !== 1 ? 's' : ''}</div>
-          <div style="font-size:18px; color:#666;">${sects} sections completed</div>
+      <div class="ui-screen" style="background:white; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; font-family:sans-serif; pointer-events:auto;">
+        <div style="font-size:72px; line-height:1; margin-bottom:8px;">&#127881;</div>
+        <div style="display:inline-block; background:#e8f5e9; color:#2e7d32; font-weight:bold; font-size:14px; padding:6px 16px; border-radius:20px; margin-bottom:12px; letter-spacing:0.5px;">&#11088; SUPER BRUSHER &#11088;</div>
+        <h2 style="margin:4px 0 8px; font-size:26px; color:#1a202c;">BRUSHING COMPLETE!</h2>
+        <p style="color:#555; font-size:16px; margin:0 0 20px;">All teeth surfaces are clean and sparkling!</p>
+        <div style="background:#f7fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px 28px; margin-bottom:24px; min-width:220px;">
+          <div style="font-size:24px; font-weight:bold; color:#2b6cb0;">${mins} minute${mins !== 1 ? 's' : ''}</div>
+          <div style="font-size:15px; color:#718096; margin-top:4px;">${sects} sections completed</div>
         </div>
-        <button id="btn-done" style="padding:16px 40px; font-size:20px; margin-top:16px; border-radius:10px; border:none; background:#007bff; color:white;">Done</button>
+        <button id="btn-done" style="padding:16px 48px; font-size:20px; font-weight:bold; border-radius:12px; border:none; background:#007bff; color:white; box-shadow:0 4px 14px rgba(0,123,255,0.3); width:80%; max-width:320px;">Done</button>
       </div>
     `);
+    triggerCelebration();
     document.getElementById('btn-done')!.onclick = showHome;
   }
   

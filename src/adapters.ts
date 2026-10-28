@@ -1,4 +1,6 @@
 import { Settings, SettingsStore, VoicePort, SoundPort, HapticPort, KeepAwakePort } from './ports';
+import { Capacitor } from '@capacitor/core';
+import { TextToSpeech } from '@capacitor-community/text-to-speech';
 
 export class LocalStorageSettingsStore implements SettingsStore {
   private defaultSettings: Settings = {
@@ -31,21 +33,99 @@ export class LocalStorageSettingsStore implements SettingsStore {
 }
 
 export class WebVoicePort implements VoicePort {
+  private activeUtterances = new Set<SpeechSynthesisUtterance>();
+  private isNative = Capacitor.isNativePlatform();
+
+  prime(): void {
+    if (this.isNative) return;
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    try {
+      window.speechSynthesis.resume();
+      // Unlock iOS Safari / iPadOS audio and synthesis queue during user gesture
+      const primer = new SpeechSynthesisUtterance('');
+      primer.volume = 0;
+      this.activeUtterances.add(primer);
+      primer.onend = () => { this.activeUtterances.delete(primer); };
+      primer.onerror = () => { this.activeUtterances.delete(primer); };
+      window.speechSynthesis.speak(primer);
+    } catch (e) {
+      // Ignored if priming fails
+    }
+  }
+
   async speak(text: string): Promise<void> {
-    if (!('speechSynthesis' in window)) return;
-    this.stop();
-    const utterance = new SpeechSynthesisUtterance(text);
-    window.speechSynthesis.speak(utterance);
+    if (this.isNative) {
+      try {
+        await TextToSpeech.stop();
+        await TextToSpeech.speak({
+          text,
+          lang: 'en-US',
+          rate: 1.0,
+          pitch: 1.0,
+          volume: 1.0,
+          category: 'ambient',
+        });
+      } catch (e) {
+        console.warn('Native TextToSpeech error:', e);
+      }
+      return;
+    }
+
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    try {
+      window.speechSynthesis.resume();
+      if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+        window.speechSynthesis.cancel();
+      }
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'en-US';
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
+
+      // Keep strong reference so iOS WebKit doesn't garbage collect mid-speech
+      this.activeUtterances.add(utterance);
+      utterance.onend = () => { this.activeUtterances.delete(utterance); };
+      utterance.onerror = () => { this.activeUtterances.delete(utterance); };
+
+      // Micro-timeout prevents WebKit asynchronous cancel() from cancelling new utterance
+      setTimeout(() => {
+        try {
+          window.speechSynthesis.speak(utterance);
+        } catch (err) {
+          this.activeUtterances.delete(utterance);
+        }
+      }, 30);
+    } catch (e) {
+      console.warn('Web SpeechSynthesis error:', e);
+    }
   }
 
   stop(): void {
-    if (!('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
+    if (this.isNative) {
+      TextToSpeech.stop().catch(() => {});
+      return;
+    }
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    try {
+      this.activeUtterances.clear();
+      window.speechSynthesis.cancel();
+    } catch (e) {}
   }
 }
 
 export class WebSoundPort implements SoundPort {
   private ctx: AudioContext | null = null;
+
+  prime(): void {
+    try {
+      this.initCtx();
+      if (this.ctx && this.ctx.state === 'suspended') {
+        this.ctx.resume();
+      }
+    } catch (e) {}
+  }
 
   private initCtx() {
     if (!this.ctx) {
