@@ -58,6 +58,9 @@ async function init() {
   const clock = new ClockAdapter();
   const sm = new SessionStateMachine(clock);
   const voice = new WebVoicePort();
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    try { window.speechSynthesis.cancel(); } catch (e) {}
+  }
   const sound = new WebSoundPort();
   const haptics = new WebHapticPort();
   const keepAwake = new WebKeepAwakePort();

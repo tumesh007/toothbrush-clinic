@@ -35,19 +35,13 @@ export class LocalStorageSettingsStore implements SettingsStore {
 export class WebVoicePort implements VoicePort {
   private activeUtterances = new Set<SpeechSynthesisUtterance>();
   private isNative = Capacitor.isNativePlatform();
+  private speechTimeout: any = null;
 
   prime(): void {
     if (this.isNative) return;
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
     try {
       window.speechSynthesis.resume();
-      // Unlock iOS Safari / iPadOS audio and synthesis queue during user gesture
-      const primer = new SpeechSynthesisUtterance('');
-      primer.volume = 0;
-      this.activeUtterances.add(primer);
-      primer.onend = () => { this.activeUtterances.delete(primer); };
-      primer.onerror = () => { this.activeUtterances.delete(primer); };
-      window.speechSynthesis.speak(primer);
     } catch (e) {
       // Ignored if priming fails
     }
@@ -72,37 +66,52 @@ export class WebVoicePort implements VoicePort {
     }
 
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    if (!text || !text.trim()) return;
+
     try {
       window.speechSynthesis.resume();
-      if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
-        window.speechSynthesis.cancel();
+
+      if (this.speechTimeout) {
+        clearTimeout(this.speechTimeout);
+        this.speechTimeout = null;
       }
 
-      const utterance = new SpeechSynthesisUtterance(text);
+      const utterance = new SpeechSynthesisUtterance(text.trim());
       utterance.lang = 'en-US';
       utterance.rate = 1.0;
       utterance.pitch = 1.0;
       utterance.volume = 1.0;
 
-      // Keep strong reference so iOS WebKit doesn't garbage collect mid-speech
+      // Keep strong reference so WebKit and Chromium don't garbage collect mid-speech
       this.activeUtterances.add(utterance);
       utterance.onend = () => { this.activeUtterances.delete(utterance); };
       utterance.onerror = () => { this.activeUtterances.delete(utterance); };
 
-      // Micro-timeout prevents WebKit asynchronous cancel() from cancelling new utterance
-      setTimeout(() => {
-        try {
-          window.speechSynthesis.speak(utterance);
-        } catch (err) {
-          this.activeUtterances.delete(utterance);
-        }
-      }, 30);
+      if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending) {
+        // Queue is clear: speak immediately & synchronously to preserve user gesture on iOS Safari
+        window.speechSynthesis.speak(utterance);
+      } else {
+        // Speech is already in progress: cancel and allow audio queue 150ms to flush before queuing next instruction
+        window.speechSynthesis.cancel();
+        this.speechTimeout = setTimeout(() => {
+          try {
+            window.speechSynthesis.resume();
+            window.speechSynthesis.speak(utterance);
+          } catch (err) {
+            this.activeUtterances.delete(utterance);
+          }
+        }, 150);
+      }
     } catch (e) {
       console.warn('Web SpeechSynthesis error:', e);
     }
   }
 
   stop(): void {
+    if (this.speechTimeout) {
+      clearTimeout(this.speechTimeout);
+      this.speechTimeout = null;
+    }
     if (this.isNative) {
       TextToSpeech.stop().catch(() => {});
       return;

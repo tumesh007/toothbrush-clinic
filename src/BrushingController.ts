@@ -24,14 +24,13 @@ export class BrushingController {
     if (!res.ok) return res;
     
     this.currentProtocol = protocol;
-    await this.keepAwake.acquire();
-    this.processEvents(this.sm.getEvents());
-    this.notifyUI();
-    this.startLoop();
-    
     if (this.settings.voice) {
       this.voice.speak("Let's start brushing.");
     }
+    this.processEvents(this.sm.getEvents());
+    this.notifyUI();
+    this.startLoop();
+    this.keepAwake.acquire().catch(() => {});
     
     return res;
   }
